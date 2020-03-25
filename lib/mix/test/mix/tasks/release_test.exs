@@ -132,6 +132,36 @@ defmodule Mix.Tasks.ReleaseTest do
         end)
       end)
     end
+
+    test "runtime config must have a valid syntax" do
+      config_path = Path.join(tmp_path(), "releases.exs")
+
+      File.write!(config_path, """
+      import Config
+      config :my_app, :key, :value
+      config :other_app, :key, :value
+      """)
+
+      assert Mix.Tasks.Release.validate_config_syntax!(config_path) === :ok
+
+      assert_raise_config_syntax(SyntaxError, config_path, """
+      import Config
+      config :my_app, :key, :value,
+      config :other_app, :key, :value
+      """)
+
+      assert_raise_config_syntax(TokenMissingError, config_path, """
+      import Config
+      config :my_app, :key, :value
+      config :other_app, :key, :value,
+      """)
+    end
+
+    defp assert_raise_config_syntax(exception, config_path, config) do
+      File.write!(config_path, config)
+      assert_raise exception, fn -> Mix.Tasks.Release.validate_config_syntax!(config_path) end
+      File.rm!(config_path)
+    end
   end
 
   describe "tar" do

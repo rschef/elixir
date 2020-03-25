@@ -1168,6 +1168,7 @@ defmodule Mix.Tasks.Release do
       path ->
         msg = "#{path} to configure the release at runtime"
         Mix.shell().info([:green, "* using ", :reset, msg])
+        validate_config_syntax!(path)
         File.cp!(path, Path.join(version_path, "releases.exs"))
         init = {:system, "RELEASE_ROOT", "/releases/#{release.version}/releases.exs"}
         update_in(release.config_providers, &[{Config.Reader, init} | &1])
@@ -1251,6 +1252,14 @@ defmodule Mix.Tasks.Release do
 
   defp skipping(message) do
     Mix.shell().info([:yellow, "* skipping ", :reset, message])
+  end
+
+  def validate_config_syntax!(path) do
+    Config.Reader.read!(path)
+    :ok
+  rescue
+    exception in [SyntaxError, TokenMissingError] -> reraise exception, __STACKTRACE__
+    _exception -> :ok
   end
 
   ## Overlays
